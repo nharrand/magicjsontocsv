@@ -1,5 +1,7 @@
 # JSON to CSV converter for magic scryfall raw data
 
+Sources in `src/se/kth/assertteam/App.java`
+
 Build:
 
 ```bash

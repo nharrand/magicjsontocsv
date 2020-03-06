@@ -21,9 +21,11 @@ import java.util.stream.Stream;
  * Hello world!
  *
  */
-public class App 
-{
+public class App {
+
+	//Can be any character not present in any column name
 	public static char separator = '¤';
+
     public static void main( String[] args ) throws IOException {
         if(args.length != 2) {
             System.err.println("Usage: java -jar magic.jar in.json out.csv");
@@ -46,19 +48,26 @@ public class App
         System.out.println("Done");
     }
 
-    private static String readFile(String filePath) {
+	/**
+	 * Read json file and return content as a String
+	 * @param filePath
+	 * @return String content
+	 */
+	private static String readFile(String filePath) {
         StringBuilder contentBuilder = new StringBuilder();
-        try (Stream<String> stream = Files.lines( Paths.get(filePath), StandardCharsets.UTF_8))
-        {
+        try (Stream<String> stream = Files.lines( Paths.get(filePath), StandardCharsets.UTF_8)) {
             stream.forEach(s -> contentBuilder.append(s).append("\n"));
-        }
-        catch (IOException e)
-        {
+        } catch (IOException e) {
             e.printStackTrace();
         }
         return contentBuilder.toString();
     }
 
+	/**
+	 * Performs first path of JSON array to get all existing column names
+	 * @param in JSON array
+	 * @return Set of all column names
+	 */
 	private static Set<String> getColumnsName(JSONArray in) {
     	Set<String> colsName = new LinkedHashSet<>();
     	for(int i = 0; i < in.length(); i++) {
@@ -81,35 +90,52 @@ public class App
 	    return colsName;
     }
 
+	/**
+	 * Performs second pass, reading each element of the array and print it as a csv line, filling missing columns with NA
+	 * @param in
+	 * @param colsName
+	 * @param out
+	 * @throws IOException
+	 */
     private static void writeCsv(JSONArray in, Set<String> colsName, File out) throws IOException {
-    	for (int i = 0; i < in.length(); i++) {
+    	for (int i = 0; i < in.length(); i++) { //For each line
     		String line = "";
     		JSONObject element = in.getJSONObject(i);
     		boolean isFirst = true;
-    		for(String key: colsName) {
+    		for(String key: colsName) { //For each key
+    			//Column separation
     			if(isFirst) {
     				isFirst = false;
 			    } else {
     				line += ",";
 			    }
+
+			    //Get cell's value
 			    String value = "NA";
 			    try {
-    				if(key.contains(separator + "")) {
+    				if(key.contains(separator + "")) { //Handle nested keys
     					String key1 = key.split(separator + "")[0];
 					    String key2 = key.split(separator + "")[1];
 					    JSONObject val = element.getJSONObject(key1);
 					    value = val.get(key2).toString();
-				    } else {
+				    } else { //Simple value
     					value = element.get(key).toString();
 				    }
-			    } catch (JSONException e) {
-			    }
+			    } catch (JSONException e) {} //if the key does not exist in this line, set value to NA
+
+			    //Escape value of type array as String
 			    if(!value.startsWith("\"") && value.contains(",")) {
 			    	value = "\"" + value.replace("\"", "\\\"") + "\"";
 			    }
+
+			    //Remove new line characters
 			    value = value.replace("\n", " ");
+
+			    //Append cell value to line
 			    line += value;
 		    }
+
+		    //Write line
 		    FileUtils.write(out, line + "\n", StandardCharsets.UTF_8, true);
 	    }
     }
